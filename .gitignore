@@ -1,3 +1,7 @@
 .ipynb_checkpoints/*
 .env
 *.ipynb
+__pycache__/*
+WINTER 2020/*
+SPRING 2020/*
+slackeventsandslashapi/__pycache__/*

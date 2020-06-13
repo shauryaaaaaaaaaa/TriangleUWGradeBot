@@ -1,10 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-from slackeventsapi import SlackEventAdapter
+from slackeventsandslashapi import SlackEventAdapter
 from slackclient import SlackClient
 from TranscriptReader import PDFParser
 import os
@@ -12,10 +6,10 @@ import requests
 from random import randint
 from time import sleep
 import pandas as pd
-from flash import Flask
-from dotenv import load_dotenv
+import json
+from dotenv import load_dotenv as import_environment_variables
 
-load_dotenv()
+import_environment_variables()
 
 NAME_SETUP = False
 ignoredUsers = ['Slackbot', 'grade_bot']
@@ -39,7 +33,7 @@ def handle_message(event_data):
         if(grade is None): return
         
         text = """I found your quarter gpa to be %s and your cumulative to be %s.
-        If this is incorrect please contact the AVP""" % grade
+If this is incorrect please contact the AVP""" % grade
         slack_client.api_call("chat.postMessage", channel=message["channel"], text=text)
         
         if(not NAME_SETUP):
@@ -76,12 +70,24 @@ def processFile(file):
         slack_client.api_call("chat.postMessage", channel=file["channel"], text='Error downloading file')
         return
     
-    fileName = 'transcript' + str(randint(0,9999999)) + '.pdf' # to do: repeated name, diff folder
-    with open(fileName, 'xb') as f:
-        f.write(response.content)
+    transcriptStorage = os.path.join(os.environ["PARENT_PATH"], quarter) + '/'
     
     try:
-        p = PDFParser(fileName, quarter)
+        os.mkdir(transcriptStorage)
+    except:
+        pass
+    
+    try:
+        fileName = 'transcript' + str(randint(0,9999999)) + '.pdf'
+        with open(transcriptStorage + fileName, 'xb') as f:
+            f.write(response.content)
+    except:
+        fileName = 'transcript' + str(randint(9999999,99999999)) + '.pdf'
+        with open(transcriptStorage + fileName, 'xb') as f:
+            f.write(response.content)
+    
+    try:
+        p = PDFParser(transcriptStorage + fileName, quarter)
         gpa = p.getGPA()
         p.closeFile()
         return gpa
@@ -94,7 +100,8 @@ def getFileURL(file):
     file_info = file.get('files')
     
     if file_info is None:
-        slack_client.api_call("chat.postMessage", channel=file["channel"], text='No file attached')
+        slack_client.api_call("chat.postMessage", channel=file["channel"],
+                              text='No file attached. For help, type /gradeshelp')
         return
     
     if(file_info[0].get('name')[-4:].lower() != '.pdf'):
@@ -134,9 +141,45 @@ class BearerAuth(requests.auth.AuthBase):
         self.token = token
     def __call__(self, r):
         r.headers["authorization"] = "Bearer " + self.token
-        return r    
+        return r
+
+@slack_events_adapter.on("slash")
+def slash(event_data):
+    if(event_data["user_name"] != os.environ["AVP_USERNAME"] or event_data["command"] == "gradeshelp"):
+        gradesHelp(event_data)
+    # elif(event_data["command"] == "postrequest"): postRequest(event_data)
+    
+
+
+def gradesHelp(event_data):
+    username = event_data["user_name"]
+    
+    if(username == os.environ["AVP_USERNAME"]):
+        text = AVPHelp()
+    else:
+        text = userHelp()
+    url = event_data["response_url"]
+    response = requests.post(url, json=json.loads(json.dumps({"text":text})))
+    if(response.status_code != 200):
+        print('Something went wrong')
+        
+def AVPHelp():
+    return """Hello Mr. AVP. I am Grade bot. Here are a list of my commands:
+/gradeshelp - Shows this dialogue.
+/postrequest [quarter] - Send a message to announcements reminding everyone to send their grades to me.
+                                    Requires the name of the quarter, must be an exact match to the transcript.
+                                        Example: /postrequest SPRING 2020
+/gradereminder - Sends a message to those that have not yet sent their grades in
+/academicprobationlist - Creates a CSV list of those with a quarterly and/or cumulative GPA below a 3.0 in
+                                    random order with no grade information to provide to the academic chair.
+/gradereport - Creates an Excel file with everyone's names and gpa"""
+    
+def userHelp(event_data):
+    return """Hi there. I am Grade bot. Please go to this link: https://sdb.admin.uw.edu/sisstudents/uwnetid/transcriptpdf.aspx
+to download your unofficial transcript and then send it to me.
+
+If you want to see how I work check out my GitHub: github.com/shauryaaaaaaaaaa/TriangleUWGradeBot"""
 
 # Once we have our event listeners configured, we can start the
 # Flask server with the default `/events` endpoint on port 3000
 slack_events_adapter.start(port=3000)
-
