@@ -131,7 +131,7 @@ class SlackServer(Flask):
                     return response
             except: # Slash command interface begins here
                 event_data = self.decodeSlash(request.data.decode('utf-8'))
-                if(event_data["token"] == 'kR8RRADzOPEzvrqG2yUsVM1x'):
+                if(event_data["token"] == os.environ["VERIFICATION_TOKEN"]):
                     self.emitter.emit("slash", event_data)
                     response = make_response("", 200)
                     response.headers['X-Slack-Powered-By'] = self.package_info
