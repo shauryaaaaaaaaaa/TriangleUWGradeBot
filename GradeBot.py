@@ -80,7 +80,7 @@ def gradeReport(event_data):
     except:
         pass
     
-    fileName = 'GradesReport' + str(randint(0, 9999999)) + '.csv'
+    fileName = 'GradesReport' + str(randint(0, 9999999)) + '.xlsx'
     reportDF = gradeDataFrame[[gradeDataFrame.columns[1], gradeDataFrame.columns[2], gradeDataFrame.columns[3]]]
     reportDF.to_excel(reportsPath + fileName, index=False)
     
