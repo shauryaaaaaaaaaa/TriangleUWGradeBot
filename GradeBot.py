@@ -14,7 +14,7 @@ import_environment_variables()
 
 global NAME_SETUP; NAME_SETUP = True
 global ignoredUsers; ignoredUsers = ['Slackbot', 'grade_bot']
-global quarter; quarter = 'WINTER 2020'
+global quarter; quarter = 'SPRING 2020'
 
 # Our app's Slack Event Adapter for receiving actions via the Events API
 slack_signing_secret = os.environ['SLACK_SIGNING_SECRET']
@@ -58,13 +58,6 @@ If this is incorrect please contact the AVP""" % grade
 def error_handler(err):
     print("ERROR: " + str(err))
 
-class BearerAuth(requests.auth.AuthBase):
-    def __init__(self, token):
-        self.token = token
-    def __call__(self, r):
-        r.headers["authorization"] = "Bearer " + self.token
-        return r
-
 @slack_events_adapter.on("slash")
 def slash(event_data):
     if(event_data["user_name"] != os.environ["AVP_USERNAME"] or event_data["command"] == "gradeshelp"):
@@ -89,7 +82,7 @@ def gradeReport(event_data):
     
     fileName = 'GradesReport' + str(randint(0, 9999999)) + '.csv'
     reportDF = gradeDataFrame[[gradeDataFrame.columns[1], gradeDataFrame.columns[2], gradeDataFrame.columns[3]]]
-    reportDF.to_csv(reportsPath + fileName, index=False)
+    reportDF.to_excel(reportsPath + fileName, index=False)
     
     sendFile(reportsPath + fileName)
     
