@@ -1,5 +1,5 @@
 from slackeventsandslashapi import SlackEventAdapter
-from slackclient import SlackClient
+from slack import WebClient
 from TranscriptReader import PDFParser
 import os
 import requests
@@ -23,7 +23,7 @@ slack_events_adapter = SlackEventAdapter(slack_signing_secret)
 
 # Create a SlackClient for your bot to use for Web API requests
 slack_bot_token = os.environ['SLACK_BOT_TOKEN']
-slack_client = SlackClient(slack_bot_token)
+slack_client = WebClient(token=slack_bot_token)
 
 # Example responder to greetings
 @slack_events_adapter.on("message")
